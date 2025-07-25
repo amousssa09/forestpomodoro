@@ -1,1 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Forest - Gestión de Tiempo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
 
+        :root {
+            --primary: #4CAF50;
+            --secondary: #8BC34A;
+            --dark: #2E7D32;
+            --darker: #1B5E20;
+            --light: #C8E6C9;
+            --accent: #FFD54F;
+            --danger: #F44336;
+            --sky: #87CEEB;
+            --ground: #8BC34A;
+            --dirt: #A1887F;
+            --trunk: #795548;
+            --leaves: #4CAF50;
+            --fruit: #F44336;
+            --menu-width: 320px;
+            --pixel-size: 4px;
+            --work-color: #FF5252;
+            --break-color: #2196F3;
+        }
+
+        body {
+            background: var(--sky);
+            min-height: 100vh;
+            color: var(--darker);
+            position: relative;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilos pixel art */
+        .pixel-border {
+            border: var(--pixel-size) solid var(--dark);
+            box-shadow: calc(var(--pixel-size) * 1.5) calc(var(--pixel-size) * 1.5) 0 var(--darker);
+            position: relative;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .pixel-border::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 8px 8px;
+            pointer-events: none;
+        }
+
+        /* Layout principal */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* Menú lateral */
+        .menu-container {
+            width: var(--menu-width);
+            height: calc(100vh - 40px);
+            position: fixed;
+            top: 20px;
+            left: calc(-1 * var(--menu-width));
+            z-index: 100;
+            transition: transform 0.4s ease;
+            overflow-y: auto;
+            padding: 20px;
+            background: linear-gradient(to bottom, var(--light), white);
+        }
+
+        .menu-container.active {
+            transform: translateX(var(--menu-width));
+        }
+
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--dark);
+        }
+
+        .menu-header h2 {
+            font-size: 1.8rem;
+            color: var(--darker);
+        }
+
+        .close-menu {
+            background: var(--danger);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 3px 3px 0 var(--darker);
+        }
+
+        /* Botón de menú flotante */
+        .menu-toggle {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            z-index: 90;
+            background: var(--primary);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 4px 4px 0 var(--darker);
+            transition: transform 0.3s;
+        }
+
+        .menu-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Contenido principal */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: calc(100vh - 40px);
+            position: relative;
+            padding: 20px;
+            width: 100%;
+        }
+
+        /* Decoraciones de fondo */
+        .pixel-cloud {
+            position: absolute;
+            width: 120px;
+            height: 60px;
+            background-color: white;
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0.85;
+        }
+
+        .pixel-cloud::before,
+        .pixel-cloud::after {
+            content: '';
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+        }
+
+        .pixel-cloud::before {
+            width: 70px;
+            height: 70px;
+            top: -20px;
+            left: 15px;
+        }
+
+        .pixel-cloud::after {
+            width: 60px;
+            height: 60px;
+            top: -15px;
+            right: 15px;
+        }
+
+        .pixel-sun {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            width: 70px;
+            height: 70px;
+            background-color: #FFEB3B;
+            border-radius: 50%;
+            box-shadow: 0 0 0 6px rgba(255, 235, 59, 0.5);
+            z-index: -1;
+        }
+
+        .pixel-bush {
+            position: absolute;
+            bottom: 30px;
+            width: 140px;
+            height: 60px;
+            background-color: var(--secondary);
+            border-radius: 30px;
+            z-index: -1;
+        }
+
+        .pixel-bush::before,
+        .pixel-bush::after {
+            content: '';
+            position: absolute;
+            background-color: var(--secondary);
+            border-radius: 50%;
+        }
+
+        .pixel-bush::before {
+            width: 70px;
+            height: 70px;
+            top: -35px;
+            left: 15px;
+        }
+
+        .pixel-bush::after {
+            width: 60px;
+            height: 60px;
+            top: -30px;
+            right: 20px;
+        }
+
+        /* Área del árbol */
+        .tree-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .tree-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .habit-name {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--darker);
+            text-align: center;
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.1);
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .nav-btn {
+            background: var(--primary);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 4px 4px 0 var(--darker);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+        }
+
+        .nav-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Parcela con tierra y cielo */
+        .plot-container {
+            width: 100%;
+            max-width: 700px;
+            height: 500px;
+            background: linear-gradient(to bottom, var(--sky) 0%, var(--sky) 70%, var(--dirt) 70%, var(--dirt) 100%);
+            border: 8px solid #5D4037;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .tree-canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .tree-info {
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.4rem;
+            color: var(--darker);
+            font-weight: bold;
+        }
+
+        .habit-type {
+            display: inline-block;
+            padding: 8px 25px;
+            background: var(--primary);
+            color: white;
+            border-radius: 30px;
+            font-weight: bold;
+            margin-top: 10px;
+            box-shadow: 4px 4px 0 var(--darker);
+            font-size: 1.2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            width: 100%;
+            max-width: 700px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 18px 35px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 5px 5px 0 var(--darker);
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-4px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .complete-btn {
+            background: var(--work-color);
+            color: white;
+        }
+
+        .avoid-btn {
+            background: var(--break-color);
+            color: white;
+        }
+
+        /* Temporizador */
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .timer-display {
+            font-size: 5rem;
+            font-weight: bold;
+            font-family: monospace;
+            color: var(--darker);
+            margin: 20px 0;
+            text-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .timer-mode {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 8px 20px;
+            border-radius: 30px;
+            background: var(--work-color);
+            color: white;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+        }
+
+        .timer-mode.break {
+            background: var(--break-color);
+        }
+
+        .timer-progress {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 3px 3px 0 rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.5s ease;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 3px solid var(--dark);
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: var(--darker);
+        }
+
+        /* Formulario de configuración */
+        .config-form {
+            margin-top: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--darker);
+            font-size: 1.1rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 4px solid var(--dark);
+            background: var(--light);
+            font-size: 1.1rem;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 5px 5px 0 var(--darker);
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-5px);
+        }
+
+        .add-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Mensajes */
+        .messages {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            font-weight: bold;
+            font-size: 1.2rem;
+            z-index: 100;
+            transition: opacity 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            text-align: center;
+            min-width: 300px;
+            max-width: 80%;
+        }
+
+        .messages.show {
+            opacity: 1;
+        }
+
+        /* Pie de página */
+        .footer {
+            text-align: center;
+            color: var(--darker);
+            font-size: 1rem;
+            padding: 15px;
+            margin-top: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .plot-container {
+                height: 400px;
+            }
+            
+            .habit-name {
+                font-size: 1.8rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .control-btn {
+                padding: 16px 25px;
+                font-size: 1.2rem;
+                min-width: 200px;
+            }
+            
+            .timer-display {
+                font-size: 4rem;
+            }
+            
+            .habit-type {
+                font-size: 1.1rem;
+                padding: 7px 20px;
+            }
+            
+            .menu-toggle {
+                top: 20px;
+                left: 20px;
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .plot-container {
+                height: 350px;
+            }
+            
+            .habit-name {
+                font-size: 1.5rem;
+            }
+            
+            .tree-info {
+                font-size: 1.1rem;
+            }
+            
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .control-btn {
+                padding: 14px 20px;
+                font-size: 1.1rem;
+                min-width: 180px;
+            }
+            
+            .app-container {
+                padding: 10px;
+            }
+            
+            .tree-display {
+                padding: 10px;
+            }
+            
+            .timer-display {
+                font-size: 3rem;
+            }
+            
+            .timer-mode {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Menú lateral -->
+        <div class="menu-container pixel-border" id="menu">
+            <div class="menu-header">
+                <h2>🍅 Pomodoro Forest</h2>
+                <button class="close-menu" id="close-menu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="config-form">
+                <h3>Configuración Pomodoro</h3>
+                <div class="form-group">
+                    <label for="work-time">Tiempo de trabajo (min):</label>
+                    <input type="number" id="work-time" min="1" max="60" value="25">
+                </div>
+                
+                <div class="form-group">
+                    <label for="break-time">Tiempo de descanso (min):</label>
+                    <input type="number" id="break-time" min="1" max="30" value="5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="pomodoro-cycles">Ciclos objetivo:</label>
+                    <input type="number" id="pomodoro-cycles" min="1" max="20" value="4">
+                </div>
+                
+                <button class="add-btn" id="save-config">
+                    <i class="fas fa-save"></i> Guardar Configuración
+                </button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div>Nivel</div>
+                    <div class="stat-value" id="tree-level">1</div>
+                </div>
+                <div class="stat-box">
+                    <div>Ciclos</div>
+                    <div class="stat-value" id="completed-cycles">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botón para abrir menú -->
+        <button class="menu-toggle" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Contenido principal -->
+        <div class="main-content">
+            <!-- Decoraciones de fondo -->
+            <div class="pixel-cloud" style="top: 10%; left: 10%;"></div>
+            <div class="pixel-cloud" style="top: 15%; right: 15%;"></div>
+            <div class="pixel-cloud" style="top: 30%; left: 25%;"></div>
+            <div class="pixel-sun"></div>
+            <div class="pixel-bush" style="left: 5%;"></div>
+            <div class="pixel-bush" style="right: 8%;"></div>
+            
+            <div class="tree-display">
+                <div class="tree-header">
+                    <div class="habit-name">
+                        Pomodoro Forest
+                    </div>
+                </div>
+                
+                <!-- Parcela con tierra y cielo -->
+                <div class="plot-container pixel-border">
+                    <div class="tree-canvas-container">
+                        <canvas id="tree-canvas" width="700" height="700"></canvas>
+                    </div>
+                </div>
+                
+                <div class="tree-info">
+                    <div id="tree-message">Completa ciclos Pomodoro para hacer crecer tu árbol</div>
+                    <div class="habit-type" id="habit-type-display">Nivel 1</div>
+                </div>
+                
+                <div class="timer-container">
+                    <div class="timer-mode" id="timer-mode">Trabajo</div>
+                    <div class="timer-display" id="timer">25:00</div>
+                    
+                    <div class="timer-progress">
+                        <div class="progress-bar" id="progress-bar" style="width: 100%"></div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="control-btn complete-btn" id="start-btn">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                        <button class="control-btn avoid-btn" id="reset-btn">
+                            <i class="fas fa-redo"></i> Reiniciar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>🍅 Trabaja con enfoque, descansa y haz crecer tu bosque 🍅</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mensajes flotantes -->
+        <div class="messages" id="messages"></div>
+    </div>
+
+    <script>
+        // Datos de la aplicación
+        let pomodoro = {
+            workTime: 25,      // minutos
+            breakTime: 5,      // minutos
+            cycles: 4,         // ciclos objetivo
+            currentCycle: 1,   // ciclo actual
+            isRunning: false,
+            currentMode: 'work', // 'work' o 'break'
+            timeLeft: 25 * 60, // en segundos
+            treeLevel: 1,
+            completedCycles: 0,
+            timerInterval: null
+        };
+        
+        // Sonidos
+        const workEndSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+        const breakEndSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-morning-clock-alarm-1003.mp3');
+        
+        // Referencias DOM
+        const menu = document.getElementById('menu');
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const saveConfigBtn = document.getElementById('save-config');
+        const timerEl = document.getElementById('timer');
+        const timerModeEl = document.getElementById('timer-mode');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const treeCanvas = document.getElementById('tree-canvas');
+        const messagesEl = document.getElementById('messages');
+        const treeMessage = document.getElementById('tree-message');
+        const treeLevelEl = document.getElementById('tree-level');
+        const completedCyclesEl = document.getElementById('completed-cycles');
+        const progressBar = document.getElementById('progress-bar');
+        
+        // Contexto del canvas
+        const ctx = treeCanvas.getContext('2d');
+        
+        // Inicializar
+        init();
+        
+        // Event Listeners
+        menuToggle.addEventListener('click', () => {
+            menu.classList.add('active');
+        });
+        
+        closeMenu.addEventListener('click', () => {
+            menu.classList.remove('active');
+        });
+        
+        saveConfigBtn.addEventListener('click', saveConfig);
+        
+        startBtn.addEventListener('click', toggleTimer);
+        
+        resetBtn.addEventListener('click', resetTimer);
+        
+        // Funciones de inicialización
+        function init() {
+            // Cargar configuración desde localStorage si existe
+            const savedConfig = localStorage.getItem('pomodoroConfig');
+            if (savedConfig) {
+                pomodoro = JSON.parse(savedConfig);
+            }
+            
+            // Actualizar la interfaz con la configuración
+            document.getElementById('work-time').value = pomodoro.workTime;
+            document.getElementById('break-time').value = pomodoro.breakTime;
+            document.getElementById('pomodoro-cycles').value = pomodoro.cycles;
+            
+            updateTimerDisplay();
+            drawTree(pomodoro.treeLevel);
+            updateStats();
+            
+            // Si el temporizador estaba en marcha, lo reiniciamos
+            if (pomodoro.isRunning) {
+                startTimer();
+            }
+        }
+        
+        // Funciones para manejar el temporizador
+        function toggleTimer() {
+            if (pomodoro.isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+        
+        function startTimer() {
+            pomodoro.isRunning = true;
+            startBtn.innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            startBtn.style.background = '#FF9800';
+            
+            pomodoro.timerInterval = setInterval(() => {
+                pomodoro.timeLeft--;
+                updateTimerDisplay();
+                
+                // Actualizar barra de progreso
+                const totalTime = pomodoro.currentMode === 'work' ? 
+                                  pomodoro.workTime * 60 : 
+                                  pomodoro.breakTime * 60;
+                const progress = (1 - (pomodoro.timeLeft / totalTime)) * 100;
+                progressBar.style.width = `${progress}%`;
+                
+                if (pomodoro.timeLeft <= 0) {
+                    if (pomodoro.currentMode === 'work') {
+                        // Fin del tiempo de trabajo
+                        workEndSound.play();
+                        pomodoro.currentMode = 'break';
+                        pomodoro.timeLeft = pomodoro.breakTime * 60;
+                        timerModeEl.textContent = 'Descanso';
+                        timerModeEl.classList.add('break');
+                        showMessage('¡Buen trabajo! Toma un descanso');
+                    } else {
+                        // Fin del tiempo de descanso
+                        breakEndSound.play();
+                        pomodoro.currentMode = 'work';
+                        pomodoro.timeLeft = pomodoro.workTime * 60;
+                        pomodoro.completedCycles++;
+                        
+                        // Hacer crecer el árbol
+                        pomodoro.treeLevel = Math.min(pomodoro.treeLevel + 1, 10);
+                        
+                        timerModeEl.textContent = 'Trabajo';
+                        timerModeEl.classList.remove('break');
+                        showMessage(`Ciclo ${pomodoro.completedCycles} completado. ¡Tu árbol ha crecido!`);
+                        
+                        if (pomodoro.treeLevel === 10) {
+                            showMessage('¡Felicidades! Tu árbol ha alcanzado su máximo tamaño 🌳');
+                        }
+                        
+                        // Actualizar estadísticas y árbol
+                        updateStats();
+                        drawTree(pomodoro.treeLevel);
+                        
+                        // Guardar estado
+                        saveConfig();
+                    }
+                }
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            pomodoro.isRunning = false;
+            clearInterval(pomodoro.timerInterval);
+            startBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar';
+            startBtn.style.background = 'var(--work-color)';
+        }
+        
+        function resetTimer() {
+            pauseTimer();
+            pomodoro.currentMode = 'work';
+            pomodoro.timeLeft = pomodoro.workTime * 60;
+            timerModeEl.textContent = 'Trabajo';
+            timerModeEl.classList.remove('break');
+            updateTimerDisplay();
+            progressBar.style.width = '0%';
+        }
+        
+        function saveConfig() {
+            pomodoro.workTime = parseInt(document.getElementById('work-time').value) || 25;
+            pomodoro.breakTime = parseInt(document.getElementById('break-time').value) || 5;
+            pomodoro.cycles = parseInt(document.getElementById('pomodoro-cycles').value) || 4;
+            
+            // Guardar en localStorage
+            localStorage.setItem('pomodoroConfig', JSON.stringify(pomodoro));
+            
+            // Reiniciar temporizador con nueva configuración
+            resetTimer();
+            showMessage('Configuración guardada');
+        }
+        
+        // Funciones de renderizado
+        function updateTimerDisplay() {
+            const minutes = Math.floor(pomodoro.timeLeft / 60);
+            const seconds = pomodoro.timeLeft % 60;
+            timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function updateStats() {
+            treeLevelEl.textContent = pomodoro.treeLevel;
+            completedCyclesEl.textContent = pomodoro.completedCycles;
+            treeMessage.textContent = pomodoro.treeLevel < 10 ? 
+                `Nivel ${pomodoro.treeLevel}/10 - Ciclo ${pomodoro.completedCycles+1}/${pomodoro.cycles}` : 
+                '¡Árbol completo!';
+            document.getElementById('habit-type-display').textContent = `Nivel ${pomodoro.treeLevel}`;
+        }
+        
+        // Funciones para dibujar árboles con crecimiento realista
+        function drawTree(level) {
+            ctx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+            
+            // Dibujar cielo
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, treeCanvas.width, treeCanvas.height * 0.7);
+            
+            // Dibujar tierra
+            ctx.fillStyle = '#8BC34A';
+            ctx.fillRect(0, treeCanvas.height * 0.7, treeCanvas.width, treeCanvas.height * 0.3);
+            
+            // Posición del árbol (centro de la parcela)
+            const treeX = treeCanvas.width / 2;
+            const treeBaseY = treeCanvas.height * 0.7; // Base en la tierra
+            
+            // Tamaño proporcional al nivel
+            const heightScale = 0.2 + (level / 12);
+            const widthScale = 0.2 + (level / 12);
+            
+            // Color del tronco
+            ctx.fillStyle = '#795548';
+            
+            // Altura del tronco (crece con el nivel)
+            const trunkHeight = 150 * heightScale;
+            const trunkWidth = 25 * widthScale;
+            
+            // Dibujar tronco
+            ctx.fillRect(treeX - trunkWidth/2, treeBaseY - trunkHeight, trunkWidth, trunkHeight);
+            
+            // Copa del árbol - depende del nivel
+            ctx.fillStyle = '#4CAF50';
+            
+            // Crecimiento progresivo del árbol
+            if (level <= 3) {
+                // Planta pequeña
+                drawLeafLayer(treeX, treeBaseY - trunkHeight, 40 * widthScale, true);
+            } else if (level <= 6) {
+                // Árbol joven
+                drawLeafLayer(treeX, treeBaseY - trunkHeight - 30, 80 * widthScale, true);
+                drawLeafLayer(treeX, treeBaseY - trunkHeight - 80, 60 * widthScale, true);
+            } else {
+                // Árbol maduro
+                drawLeafLayer(treeX, treeBaseY - trunkHeight - 50, 120 * widthScale, true);
+                drawLeafLayer(treeX, treeBaseY - trunkHeight - 120, 100 * widthScale, true);
+                drawLeafLayer(treeX, treeBaseY - trunkHeight - 190, 80 * widthScale, true);
+                
+                if (level >= 8) {
+                    drawLeafLayer(treeX, treeBaseY - trunkHeight - 260, 60 * widthScale, true);
+                }
+                
+                if (level >= 9) {
+                    drawLeafLayer(treeX, treeBaseY - trunkHeight - 320, 50 * widthScale, true);
+                }
+            }
+            
+            // Ramas en niveles altos
+            if (level >= 4) {
+                drawBranch(treeX, treeBaseY - trunkHeight/2, 70 * widthScale, -30, level);
+                drawBranch(treeX, treeBaseY - trunkHeight/2, 70 * widthScale, 30, level);
+                
+                if (level >= 6) {
+                    drawBranch(treeX, treeBaseY - trunkHeight/1.5, 50 * widthScale, -45, level);
+                    drawBranch(treeX, treeBaseY - trunkHeight/1.5, 50 * widthScale, 45, level);
+                }
+                
+                if (level >= 8) {
+                    drawBranch(treeX, treeBaseY - trunkHeight/1.2, 40 * widthScale, -60, level);
+                    drawBranch(treeX, treeBaseY - trunkHeight/1.2, 40 * widthScale, 60, level);
+                }
+            }
+            
+            // Frutas en niveles altos
+            if (level >= 5) {
+                ctx.fillStyle = '#F44336';
+                drawFruit(treeX - 50 * widthScale, treeBaseY - trunkHeight - 30, 12 * widthScale);
+                drawFruit(treeX + 50 * widthScale, treeBaseY - trunkHeight - 50, 12 * widthScale);
+                
+                if (level >= 7) {
+                    drawFruit(treeX - 70 * widthScale, treeBaseY - trunkHeight - 100, 12 * widthScale);
+                    drawFruit(treeX + 70 * widthScale, treeBaseY - trunkHeight - 120, 12 * widthScale);
+                }
+                
+                if (level >= 9) {
+                    drawFruit(treeX - 90 * widthScale, treeBaseY - trunkHeight - 170, 12 * widthScale);
+                    drawFruit(treeX + 90 * widthScale, treeBaseY - trunkHeight - 190, 12 * widthScale);
+                    drawFruit(treeX, treeBaseY - trunkHeight - 230, 12 * widthScale);
+                }
+            }
+            
+            // Aplicar efecto pixel art
+            pixelateCanvas(treeCanvas);
+        }
+        
+        function drawLeafLayer(x, y, size, visible) {
+            if (!visible) return;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawBranch(x, y, length, angle, level) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle * Math.PI/180);
+            
+            // Color de la rama
+            ctx.fillStyle = '#795548';
+            
+            // Dibujar rama
+            const branchWidth = 10 * (level/10);
+            ctx.fillRect(0, 0, length, branchWidth);
+            
+            // Hojas en la rama
+            ctx.fillStyle = '#4CAF50';
+            const leafSize = 25 * (level/10);
+            drawLeafLayer(length - 15, branchWidth/2, leafSize, true);
+            drawLeafLayer(length/2, branchWidth/2, leafSize * 0.8, true);
+            
+            ctx.restore();
+        }
+        
+        function drawFruit(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function pixelateCanvas(canvas) {
+            const pixelSize = 4;
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            tempCanvas.width = canvas.width / pixelSize;
+            tempCanvas.height = canvas.height / pixelSize;
+            
+            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 
+                          0, 0, canvas.width, canvas.height);
+        }
+        
+        // Funciones auxiliares
+        function showMessage(message, type = 'success') {
+            messagesEl.textContent = message;
+            messagesEl.className = 'messages show';
+            
+            switch (type) {
+                case 'error':
+                    messagesEl.style.backgroundColor = '#FFCDD2';
+                    messagesEl.style.color = '#B71C1C';
+                    break;
+                case 'info':
+                    messagesEl.style.backgroundColor = '#BBDEFB';
+                    messagesEl.style.color = '#0D47A1';
+                    break;
+                default:
+                    messagesEl.style.backgroundColor = '#C8E6C9';
+                    messagesEl.style.color = '#1B5E20';
+            }
+            
+            setTimeout(() => {
+                messagesEl.className = 'messages';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
